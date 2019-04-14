@@ -1,0 +1,77 @@
+Version history: (M/D/Y from oldest to newest)
+11/15/2015
+	-rerelease the patch with sa-1 support.
+1/11/2016
+	-Alcaro pointed out that this patch has a flaw on the gfx+2 patch conflict, he
+	 said this:
+
+	;----quote----;
+	This patch requires the gfx+2 patch to be installed at a very specific location.
+	By default, the patch is inserted exactly there, but I suspect it's not if the
+	ROM is expanded to 4MB. Either way, fix your nonsensical requirements, GHB. Use
+	assert read1($00F6E4) == $5C and org read3($00F6E5). And double check the SA-1
+	support, you missed the assert there and I suspect you may have missed more.
+	;----end_quote----;
+
+	This means that:
+	-The center scroll patch's assert thinks you haven't saved a level if gfx+2 patch's
+	 location isn't in a specific freespace area.
+	-After expanding your rom for SA-1, LM still doesn't insert the scroll hijack until
+	 you have saved a level, this could break the scrolling routine if inserted before
+	 saving in a sa-1 rom.
+	-Discovered why the "save level once" check fails to work on a sa-1 rom, you must
+	 use "sa1rom" command BEFORE ANY of the rom addresses, so that it tells asar to
+	 remap ALL the address below/after the command to be adopted to sa-1.
+1/15/2016
+	-Minor fix: the example explaining on how to get codes to be compatable with this
+	 had a typo using a double-period.
+3/18/2016
+	-Added a new feature that you can now see the bottom row of 16x16 blocks in
+	 horizontal levels.
+	-Added an advanced version. This new one is based on ram address and the vertical
+	 scrolling's static camera region is also reduced.
+3/20/2016
+	-Fix an inconsistency with the "no vertical scroll unless flying/climbing/etc."
+	 setting. While the scree's Y position value is more than #$00C0 (along the bottom
+	 of the level), the screen is able to scroll up #$0010 pixels without flying,
+	 climbing/etc. This happens also on the SMB3 status bar.
+	-Fix a displacement issue that if you transfer from a level that has "vertical
+	 scroll at will" to a level that has no vertical scroll, the screen scrolls to
+	 look for mario for 1 frame during black screen, messing up horizontal layer 2
+	 levels.
+3/30/2016
+	-Fix a fatel glitch with CenterScroll.asm, where the hijack $00F88F wasn't valid:
+		;----code----;
+		CODE_00F88D:        B0 03         BCS CODE_00F892           
+		CODE_00F88F:        B9 A7 F6      LDA.W DATA_00F6A7,Y       
+		CODE_00F892:        18            CLC                       
+		CODE_00F893:        65 1C         ADC RAM_ScreenBndryYLo    
+		;----end_code----;
+	 If BCS CODE_00F892 branches, it would branch into a portion of the JML; reading
+	 it incorrectly.
+1/13/2017 - 2.0
+	-Edited the lowest inital y positon to adopt with the new lowest Y positon in
+	 level.
+	-Now uses the latest version of sprite scroll fix.
+	-Added a new center scroll patch named "CenterScrollAdvanced_NonInstant.asm", which
+	 allows the player to change position a few blocks away without graphical glitches
+	 since the screen no longer instantly jolts.
+
+2/10/2017
+	-Added a note about some sprites that are screen-position relative that they are
+	 adjusted on this readme.
+8/17/2017 - 2.2
+	-Fix a bug on the two CenterScrollAdvanced patches that caused the layer 2 inital
+	 Y position to be 1 tile lower than it should be (provided that the screen wasn't
+	 scrolled during non-constant Y scroll) when having layer 1 and 2 at the lowest
+	 position possible (lower down = higher Y value).
+12/29/2018 - 3.0
+	-Merged all 3 patches into one, and the options are in the form of defines.
+	-Fixed a pointless org hijack: org $00F72D and org $00F72C. The first one can be
+	 removed.
+	-Adapted the patch to work properly in LM v3.00. Most of the major changes are:
+	--LM makes jumps in the code that are essentially substituting them (it skips SMW's code
+	  and runs it's own freespace code instead).
+	--Because LM V3.00 fixes a lot of layer 2-related Y position issues and enables the
+	  camera to scroll down to see the bottom row in horizontal levels, the old hijacks
+	  are now obsolete as LM is in charge for fixing SMW's "bugs" and other quirks.

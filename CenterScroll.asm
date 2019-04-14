@@ -136,13 +136,13 @@ endif
 	autoclean JSL InitScrollPos	;/
 	nop #4
 
-	org read3($009708+1)+$12	;\Above hijack commented out due to LM adding jumps to skip
+	org read3($009708+1)+$15	;\Above hijack commented out due to LM adding jumps to skip
 	autoclean JSL InitScrollPos	;|codes this patch relies on, thus have to edit LM code instead.
 	nop #2				;/(not sure why sometimes the above hijacks only executes or this one).
-	;Modified:
+	;LM hijack offset note (for future reference)
+	;---------------------------------------------
 	;009708 jsl $1082a8   [1082a8]
-
-	;Freespace code (location varies):
+	;
 	;1082a8 lda #$20               
 	;1082aa sta $5e       [00005e] 
 	;1082ac bit $13cd     [0013cd] 
@@ -151,13 +151,40 @@ endif
 	;1082b4 stz $76       [000076] 
 	;1082b6 bpl $82c7     [1082c7] 
 	;1082b8 rep #$21               
-	;1082ba lda #$0080             ;\Modify this.
+	;1082ba lda #$0080             ;\Modify this. [offset +$12 ($1082ba - $1082a8)]
 	;1082bd sta $142a     [00142a] ;/
 	;1082c0 pla                    ;\Modify stack to jump to $00970f
 	;1082c1 adc #$0003             ;|instead of $00970C after RTL, this skips
 	;1082c4 pha                    ;/[JSR.w $00A796]
 	;1082c5 sep #$20               
 	;1082c7 rtl                    
+	;---------------------------------------------
+	;^This above hijack no longer works, as LM 3.03 changed it to this:
+	;009708 jsl $1082a8   [1082a8] 
+	;
+	;1082a8 lda [$65]     [0685b5] 
+	;1082aa and #$1f               
+	;1082ac inc                    
+	;1082ad sta $5e       [00005e] 
+	;1082af bit $13cd     [0013cd] 
+	;1082b2 stz $13cd     [0013cd] 
+	;1082b5 bvc $82b9     [1082b9] 
+	;1082b9 bpl $82ca     [1082ca] 
+	;1082bb rep #$21               
+	;1082bd lda #$0080             ;\Should modify this [offset +$15 ($1082bd - $1082a8)]
+	;1082c0 sta $142a     [00142a] ;/
+	;1082c3 pla                    
+	;1082c4 adc #$0003             
+	;1082c7 pha                    
+	;1082ca rtl                    
+	;---------------------------------------------
+	
+	
+	
+	
+	
+	
+	
 ;Position scrolling lines (this moves the screen)
 	org $00F72C
 	autoclean JML NewXScroll	;>New horizontal scroll routine (horizontal level)

@@ -178,13 +178,6 @@ endif
 	;1082c7 pha                    
 	;1082ca rtl                    
 	;---------------------------------------------
-	
-	
-	
-	
-	
-	
-	
 ;Position scrolling lines (this moves the screen)
 	org $00F72C
 	autoclean JML NewXScroll	;>New horizontal scroll routine (horizontal level)

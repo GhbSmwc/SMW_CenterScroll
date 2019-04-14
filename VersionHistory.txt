@@ -75,3 +75,14 @@ Version history: (M/D/Y from oldest to newest)
 	--Because LM V3.00 fixes a lot of layer 2-related Y position issues and enables the
 	  camera to scroll down to see the bottom row in horizontal levels, the old hijacks
 	  are now obsolete as LM is in charge for fixing SMW's "bugs" and other quirks.
+4/14/2019
+	-Fix a crashing bug on LM 3.03 that if you move the player's spawning position then
+	 save, the hijack at $009708 gets changed and breaks with this hijack of this patch:
+		;----code----;
+			org read3($009708+1)+$12	;\Above hijack commented out due to LM adding jumps to skip
+			autoclean JSL InitScrollPos	;|codes this patch relies on, thus have to edit LM code instead.
+			nop #2				;/(not sure why sometimes the above hijacks only executes or this one).
+		;----end_code----;
+	 As the +$12 offset from the start of the LM freespace code must be changed to +$15
+	 since new code was added before doing LDA #$0080 : STA $142A, therefore moving it
+	 3 bytes later.

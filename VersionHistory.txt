@@ -75,7 +75,7 @@ Version history: (M/D/Y from oldest to newest)
 	--Because LM V3.00 fixes a lot of layer 2-related Y position issues and enables the
 	  camera to scroll down to see the bottom row in horizontal levels, the old hijacks
 	  are now obsolete as LM is in charge for fixing SMW's "bugs" and other quirks.
-4/14/2019
+4/14/2019 3.1
 	-Fix a crashing bug on LM 3.03 that if you move the player's spawning position then
 	 save, the hijack at $009708 gets changed and breaks with this hijack of this patch:
 		;----code----;
@@ -86,3 +86,5 @@ Version history: (M/D/Y from oldest to newest)
 	 As the +$12 offset from the start of the LM freespace code must be changed to +$15
 	 since new code was added before doing LDA #$0080 : STA $142A, therefore moving it
 	 3 bytes later.
+4/17/2020 3.2
+	-Fixed a crashing bug in vertical levels on LM v3.11 due to a new hijack at $00F77B.

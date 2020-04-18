@@ -1,3 +1,12 @@
+;NOTE: LM hijacks several scrolling-related code that this patch tries to modify.
+;For future fixes:
+;-I've laid out which ORGs modifies LM code that is in a freespace.
+; they're tagged with [Modfies LM code in freespace]
+;-Should a NEW hijack *in* SMW's code (Not using jumps to freespace code, such as
+; the quake code at $00A2AF) exist in the newer LM versions, make note of the new
+; hijack and do the same indent-like format for easy maintaining of this patch.
+;
+;
 
 !Setting_CenterScroll_ScrollType	= 1
  ;^0 = Normal, L/R scrolling is possible (normal version);
@@ -99,23 +108,44 @@ endif
 	
 	org $00F6E3			;>Get rid of the SEC
 	nop #1
-	
-	org read3($00F6E4+1)		;\Get rid of the SBC in LM's restore code
-	nop #6				;/
-	;^To understand this, after saving a level in Lunar magic, it changes the opcode at $00F6E4
-	;from SBC.W #$000C to JMP $AABBCC (formated in raw code, hex numbers: 5C CC BB AA). By
-	;using 3 bytes after the opcode itself, Asar only reads the address that Lunar magic jumps
-	;to (modifying address $AABBCC). It should now ALWAYS hijack the LM code regardless of its
-	;location.
+	;[Modfies LM code in freespace]
+		;Old (still working!)
+			org read3($00F6E4+1)		;\Get rid of the SBC in LM's restore code
+			nop #6				;/
+		;^To understand this, after saving a level in Lunar magic, it changes the opcode at $00F6E4
+		;from SBC.W #$000C to JMP $AABBCC (formated in raw code, hex numbers: 5C CC BB AA). By
+		;using 3 bytes after the opcode itself, Asar only reads the address that Lunar magic jumps
+		;to (modifying address $AABBCC). It should now ALWAYS hijack the LM code regardless of its
+		;location.
+		;
+		;My intentions to modify in LM's freespace code:
+		;00f6e4 jml $1fb1a0   [1fb1a0]
+		;
+		;1fb1a0 sbc #$000c             ;\Modify all 6 bytes to all NOPs
+		;1fb1a3 sta $142c     [00142c] ;/
+		;1fb1a6 pha                    
+		;1fb1a7 ldx #$06               
 
 	org $00F6EA			;>Get rid of the CLC ADC
 	nop #7
+	;This code is skipped and is run in LM's code that will set the scroll line positions:
+		;org $00F72D			;>free up $142C and $142E
+		;SBC $142A|!addr	
 
-	;org $00F72D			;>free up $142C and $142E
-	;SBC $142A|!addr	
-
-	org $00F77C			;>free up $142C and $142E (vertical level horizontal scrolling)
-	SBC $142A|!addr	
+	;free up $142C and $142E (vertical level horizontal scrolling):
+		;Old:
+			;org $00F77C		
+			;SBC $142A|!addr	
+		;[Modfies LM code in freespace] New LM hijack at $00F77B (found a crashing issue on 3.11). Fixed version:
+			org read3($00F77B+1)+1
+			SBC $142A|!addr
+		;My intentions to modify in LM's freespace code:
+		;00f77b jml $1081f6   [1081f6]
+		;
+		;1081f6 sec                    
+		;1081f7 sbc $142c,y   [00142c] ;>Modify this to use $142A.
+		;1081fa beq $8206     [108206] 
+		;1081fc jml $00f77f   [00f77f] 
 ;LR scrolling
 	if and(equal(!Setting_CenterScroll_ScrollType, 0), notequal(!Setting_CenterScroll_EnableLRScrolling, 0))
 		org $00CDF6		;\Enable LR scrolling
@@ -131,53 +161,74 @@ endif
 		org $00CCC3		;|
 		nop #3			;/
 	endif
-;Initialize scroll lines position
+;Initialize scroll lines positions
 	org $00A7B9			;\Set initial scroll line positions
 	autoclean JSL InitScrollPos	;/
 	nop #4
 
-	org read3($009708+1)+$15	;\Above hijack commented out due to LM adding jumps to skip
-	autoclean JSL InitScrollPos	;|codes this patch relies on, thus have to edit LM code instead.
-	nop #2				;/(not sure why sometimes the above hijacks only executes or this one).
-	;LM hijack offset note (for future reference)
-	;---------------------------------------------
-	;009708 jsl $1082a8   [1082a8]
-	;
-	;1082a8 lda #$20               
-	;1082aa sta $5e       [00005e] 
-	;1082ac bit $13cd     [0013cd] 
-	;1082af stz $13cd     [0013cd] 
-	;1082b2 bvc $82b6     [1082b6] 
-	;1082b4 stz $76       [000076] 
-	;1082b6 bpl $82c7     [1082c7] 
-	;1082b8 rep #$21               
-	;1082ba lda #$0080             ;\Modify this. [offset +$12 ($1082ba - $1082a8)]
-	;1082bd sta $142a     [00142a] ;/
-	;1082c0 pla                    ;\Modify stack to jump to $00970f
-	;1082c1 adc #$0003             ;|instead of $00970C after RTL, this skips
-	;1082c4 pha                    ;/[JSR.w $00A796]
-	;1082c5 sep #$20               
-	;1082c7 rtl                    
-	;---------------------------------------------
-	;^This above hijack no longer works, as LM 3.03 changed it to this:
-	;009708 jsl $1082a8   [1082a8] 
-	;
-	;1082a8 lda [$65]     [0685b5] 
-	;1082aa and #$1f               
-	;1082ac inc                    
-	;1082ad sta $5e       [00005e] 
-	;1082af bit $13cd     [0013cd] 
-	;1082b2 stz $13cd     [0013cd] 
-	;1082b5 bvc $82b9     [1082b9] 
-	;1082b9 bpl $82ca     [1082ca] 
-	;1082bb rep #$21               
-	;1082bd lda #$0080             ;\Should modify this [offset +$15 ($1082bd - $1082a8)]
-	;1082c0 sta $142a     [00142a] ;/
-	;1082c3 pla                    
-	;1082c4 adc #$0003             
-	;1082c7 pha                    
-	;1082ca rtl                    
-	;---------------------------------------------
+	;LM-reliant code hijack:
+		org read3($009708+1)+$15	;\Above hijack commented out due to LM adding jumps to skip
+		autoclean JSL InitScrollPos	;|codes this patch relies on, thus have to edit LM code instead.
+		nop #2				;/(not sure why sometimes the above hijacks only executes or this one).
+		;LM hijack offset note (for future reference, so I'll show you that it needs to modify [lda #$0080 : sta $142a]).
+		;---------------------------------------------
+		;009708 jsl $1082a8   [1082a8]
+		;
+		;1082a8 lda #$20               
+		;1082aa sta $5e       [00005e] 
+		;1082ac bit $13cd     [0013cd] 
+		;1082af stz $13cd     [0013cd] 
+		;1082b2 bvc $82b6     [1082b6] 
+		;1082b4 stz $76       [000076] 
+		;1082b6 bpl $82c7     [1082c7] 
+		;1082b8 rep #$21               
+		;1082ba lda #$0080             ;\Modify this. [offset +$12 ($1082ba - $1082a8)]
+		;1082bd sta $142a     [00142a] ;/
+		;1082c0 pla                    ;\Modify stack to jump to $00970f
+		;1082c1 adc #$0003             ;|instead of $00970C after RTL, this skips
+		;1082c4 pha                    ;/[JSR.w $00A796]
+		;1082c5 sep #$20               
+		;1082c7 rtl                    
+		;---------------------------------------------
+		;^This above hijack no longer works, as LM 3.03 changed it to this:
+		;009708 jsl $1082a8   [1082a8] 
+		;
+		;1082a8 lda [$65]     [0685b5] 
+		;1082aa and #$1f               
+		;1082ac inc                    
+		;1082ad sta $5e       [00005e] 
+		;1082af bit $13cd     [0013cd] 
+		;1082b2 stz $13cd     [0013cd] 
+		;1082b5 bvc $82b9     [1082b9] 
+		;1082b9 bpl $82ca     [1082ca] 
+		;1082bb rep #$21               
+		;1082bd lda #$0080             ;\Should modify this [offset +$15 ($1082bd - $1082a8)]
+		;1082c0 sta $142a     [00142a] ;/
+		;1082c3 pla                    
+		;1082c4 adc #$0003             
+		;1082c7 pha                    
+		;1082ca rtl                    
+		;---------------------------------------------
+		;^code did change again on version 3.11, but the offset is the same:
+		;009708 jsl $108196   [108196]
+		;
+		;108196 lda [$65]     [0685b5] 
+		;108198 and #$1f               
+		;10819a inc                    
+		;10819b sta $5e       [00005e] 
+		;10819d bit $13cd     [0013cd] 
+		;1081a0 stz $13cd     [0013cd] 
+		;1081a3 bvc $81a7     [1081a7] 
+		;1081a5 stz $76       [000076] 
+		;1081a7 bpl $81b8     [1081b8] 
+		;1081a9 rep #$21               
+		;1081ab lda #$0080             ;\Should modify this [offset +$15 ($1081ab - $108196)]
+		;1081ae sta $142a     [00142a] ;/
+		;1081b1 pla                    
+		;1081b2 adc #$0003             
+		;1081b5 pha                    
+		;1081b6 sep #$20               
+		;1081b8 rtl                    
 ;Position scrolling lines (this moves the screen)
 	org $00F72C
 	autoclean JML NewXScroll	;>New horizontal scroll routine (horizontal level)

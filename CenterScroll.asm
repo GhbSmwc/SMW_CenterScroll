@@ -321,7 +321,7 @@ NewXScroll2: ;>JML from $00F789
 			SBC #$0008
 			STA $1C
 			JSL UpdatePlayerYCoordinateOnScreen
-			LDA $142C
+			LDA $142C|!addr
 			CMP $00
 			BMI ..SnapYpos
 			BRA .Done

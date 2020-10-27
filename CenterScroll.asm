@@ -84,7 +84,7 @@ elseif read1($00FFD5) == $23
 	!sa1 = 1
 endif
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;Notify if level has not been saved.
+;Check if the LM code was inserted.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	;This tells asar to check in the rom to see if lunar magic has modify snes address $00F6E4 from
 	;[SBC #$000C] to [JML $1FB1A0] (actually, not always $1FB1A0):
@@ -98,33 +98,32 @@ endif
 ;Hijacks and edits.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Free up $142C and $142E (2 bytes each).
+	org $00F6B3
 	if !Setting_CenterScroll_ScrollType == 0
-		org $00F6B3
 		db $78,$00,$7A,$00	;>scroll tables
 	else
-		org $00F6B3
 		db $90,$00,$60,$00	;>scroll tables
 	endif
 	
-	org $00F6E3			;>Get rid of the SEC
-	nop #1
-		;^[Modfies LM code in freespace]
-			;Old (still working!)
-				org read3($00F6E4+1)		;\Get rid of the SBC in LM's restore code
-				nop #6				;/
-					;^To understand this, after saving a level in Lunar magic, it changes the opcode at $00F6E4
-					;from SBC.W #$000C to JMP $AABBCC (formated in raw code, hex numbers: 5C CC BB AA). By
-					;using 3 bytes after the opcode itself, Asar only reads the address that Lunar magic jumps
-					;to (modifying address $AABBCC). It should now ALWAYS hijack the LM code regardless of its
-					;location.
-			
-					;My intentions to modify in LM's freespace code:
-					;00f6e4 jml $1fb1a0   [1fb1a0]
-					;
-					;1fb1a0 sbc #$000c             ;\Modify all 6 bytes to all NOPs
-					;1fb1a3 sta $142c     [00142c] ;/
-					;1fb1a6 pha                    
-					;1fb1a7 ldx #$06               
+	;[Modfies LM code]:
+		org $00F6E3			;>Get rid of the SEC
+		nop #1
+		
+		org read3($00F6E4+1)		;\Get rid of the SBC in LM's restore code
+		nop #6				;/
+			;^To understand this, after saving a level in Lunar magic, it changes the opcode at $00F6E4
+			;from SBC.W #$000C to JMP $AABBCC (formated in raw code, hex numbers: 5C CC BB AA). By
+			;using 3 bytes after the opcode itself, Asar only reads the address that Lunar magic jumps
+			;to (modifying address $AABBCC). It should now ALWAYS hijack the LM code regardless of its
+			;location.
+	
+			;My intentions to modify in LM's freespace code:
+			;00f6e4 jml $1fb1a0   [1fb1a0]
+			;
+			;1fb1a0 sbc #$000c             ;\Modify all 6 bytes to all NOPs
+			;1fb1a3 sta $142c     [00142c] ;/
+			;1fb1a6 pha                    
+			;1fb1a7 ldx #$06               
 
 	org $00F6EA			;>Get rid of the CLC ADC
 	nop #7
@@ -237,10 +236,14 @@ endif
 		;1082b1 bit $13cd     [0013cd] 
 		;1082b4 stz $13cd     [0013cd] 
 		;1082b7 bvc $82bf     [1082bf] 
+		;1082b9 stz $76       [000076] 
+		;1082bb php                    
+		;1082bc lda #$c0               
+		;1082be plp                    
 		;1082bf sta $f9       [0000f9] 
 		;1082c1 bpl $82d2     [1082d2] 
 		;1082c3 rep #$21               
-		;1082c5 lda #$0080             ;\Should modify this [ofset +$1D ($1082c5 - $1082a8)]
+		;1082c5 lda #$0080             ;\Here. (1082c5 - 1082a8 = $1D)
 		;1082c8 sta $142a     [00142a] ;/
 		;1082cb pla                    
 		;1082cc adc #$0003             

@@ -100,3 +100,9 @@ Version history: (M/D/Y from oldest to newest)
 10/27/2020 3.4 (LM v 3.21's changed code)
 	-Fixed the broken compatibility with LM 3.21 (the code after executing $009708 got changed). Give thanks to
 	 Hayashi Neru (https://www.smwcentral.net/?p=profile&id=31439 ) for reporting this.
+4/25/2021 3.5
+	-Fixed a bug that occurred in the Ludwig and Reznor boss battle-- the screen was set at X=$FF00, and caused
+	 the player to die after the level loads. Furthermore, $5E behaves differently (it is $00, not $01 or any
+	 integer values higher) due to the fact that the boss room is 1 and a 1/2 screen wide (screen X position
+	 ranges from $0000 to $0080). Thanks to AyGaAlPa (https://www.smwcentral.net/?p=profile&id=35770 ) for
+	 reporting this.

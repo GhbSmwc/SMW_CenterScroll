@@ -297,12 +297,22 @@ InitScrollPos: ;>JSL from $00A7B9 (actually, read3($009708+1)+$12)
 	RTL
 ;---------------------------------------------------------------------------
 NewXScroll: ;>JML from $00F72C
+	;A: 16-bit
 	JSL Sub_HorizPos
 
 	LDA $5E			;>Load last screen.
+	AND #$00FF		;>Get rid of value of $5F since we're 16-bit
+	BNE .Normal		;>If Ludwig and Reznor's scroll range ($5E == $00), treat this as special
+	
+	.LudwigReznor
+	LDA #$0080		;>$0080 is 1 and a 1/2 screen-wide area. Thus this is the width of the boss room.
+	BRA .Compare
+	
+	.Normal
 	DEC			;>Minus 1
 	XBA			;>Transfer it to high byte
-	AND #$FF00		;>Get rid of value of $5F since we're 16-bit
+	
+	.Compare
 	CMP $1A			;\Prevent screen from going past
 	BPL .Good		;|right edge of level.
 	STA $1A			;/
